@@ -4,11 +4,11 @@
 #  vps-latency-test.sh
 #
 #  Author      : VPS Benchmark Project
-#  Version     : 1.2.0
+#  Version     : 1.4.0
 #  License     : MIT License
 #  Description : Tests network latency from your VPS to major global and
-#                Chinese websites using ping. Outputs a color-coded table
-#                showing average latency and packet loss for each target.
+#                Chinese websites. Uses ICMP ping first; automatically falls
+#                back to curl TCP-connect timing for hosts that block ICMP.
 #
 #  Usage       : bash vps-latency-test.sh [OPTIONS]
 #  Options     :
@@ -16,144 +16,127 @@
 #    -t TIMEOUT  Ping timeout in seconds (default: 3)
 #    -h          Show this help message
 #
-#  One-liner   :
-#    curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/vps-latency-test/main/vps-latency-test.sh | bash
+#  One-liner (replace YOUR_USER with your GitHub username):
+#    curl -fsSL https://raw.githubusercontent.com/YOUR_USER/vps-latency-test/main/vps-latency-test.sh | bash
 #
-#  MIT License
-#  Copyright (c) 2025 VPS Benchmark Project
-#  Permission is hereby granted, free of charge, to any person obtaining a copy
-#  of this software and associated documentation files (the "Software"), to deal
-#  in the Software without restriction, including without limitation the rights
-#  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-#  copies of the Software, and to permit persons to whom the Software is
-#  furnished to do so, subject to the following conditions:
-#  The above copyright notice and this permission notice shall be included in
-#  all copies or substantial portions of the Software.
+#  MIT License — Copyright (c) 2025 VPS Benchmark Project
 # ==============================================================================
 
-set -euo pipefail
+set -uo pipefail
 
-# ── Color Definitions ──────────────────────────────────────────────────────────
+# ── Colors ─────────────────────────────────────────────────────────────────────
 RED='\033[0;31m'
 YELLOW='\033[0;33m'
 GREEN='\033[0;32m'
 CYAN='\033[0;36m'
 BLUE='\033[0;34m'
-MAGENTA='\033[0;35m'
 WHITE='\033[1;37m'
 BOLD='\033[1m'
 DIM='\033[2m'
 RESET='\033[0m'
 
-# ── Default Parameters ─────────────────────────────────────────────────────────
+# ── Defaults ───────────────────────────────────────────────────────────────────
 PING_COUNT=5
 PING_TIMEOUT=3
+PING_OS="linux"
 
-# ── Target Definitions ─────────────────────────────────────────────────────────
-# Format: "Display Name|Host|Region"
+# ── Target Lists ───────────────────────────────────────────────────────────────
+# Format: "Display Name|host"
 
-# --- Core Infrastructure & Tech ---
 TARGETS_CORE=(
-    "Google|google.com|🌐 Core"
-    "Cloudflare DNS|1.1.1.1|🌐 Core"
-    "Google DNS|8.8.8.8|🌐 Core"
-    "GitHub|github.com|🌐 Core"
-    "Amazon AWS|amazon.com|🌐 Core"
-    "Microsoft|microsoft.com|🌐 Core"
-    "Cloudflare CDN|cloudflare.com|🌐 Core"
-    "Fastly CDN|fastly.com|🌐 Core"
+    "Google|google.com"
+    "Cloudflare DNS|1.1.1.1"
+    "Google DNS|8.8.8.8"
+    "GitHub|github.com"
+    "Amazon AWS|amazon.com"
+    "Microsoft|microsoft.com"
+    "Cloudflare CDN|cloudflare.com"
+    "Fastly CDN|fastly.com"
 )
 
-# --- Streaming & Media ---
 TARGETS_STREAMING=(
-    "YouTube|youtube.com|📺 Stream"
-    "Netflix|netflix.com|📺 Stream"
-    "Disney+|disneyplus.com|📺 Stream"
-    "Hulu|hulu.com|📺 Stream"
-    "Twitch|twitch.tv|📺 Stream"
-    "Spotify|spotify.com|📺 Stream"
-    "Apple TV+|tv.apple.com|📺 Stream"
-    "HBO Max|max.com|📺 Stream"
-    "Crunchyroll|crunchyroll.com|📺 Stream"
-    "SoundCloud|soundcloud.com|📺 Stream"
+    "YouTube|youtube.com"
+    "Netflix|netflix.com"
+    "Disney+|disneyplus.com"
+    "Hulu|hulu.com"
+    "Twitch|twitch.tv"
+    "Spotify|spotify.com"
+    "Apple TV+|tv.apple.com"
+    "HBO Max|max.com"
+    "Crunchyroll|crunchyroll.com"
+    "SoundCloud|soundcloud.com"
 )
 
-# --- Social, Forums & Communities ---
 TARGETS_SOCIAL=(
-    "Twitter / X|x.com|💬 Social"
-    "Reddit|reddit.com|💬 Social"
-    "Discord|discord.com|💬 Social"
-    "Stack Overflow|stackoverflow.com|💬 Social"
-    "Hacker News|news.ycombinator.com|💬 Social"
-    "Wikipedia|wikipedia.org|💬 Social"
-    "Telegram|telegram.org|💬 Social"
-    "LinkedIn|linkedin.com|💬 Social"
-    "Quora|quora.com|💬 Social"
-    "Medium|medium.com|💬 Social"
-    "Dev.to|dev.to|💬 Social"
-    "Mastodon|mastodon.social|💬 Social"
+    "Twitter / X|x.com"
+    "Reddit|reddit.com"
+    "Discord|discord.com"
+    "Stack Overflow|stackoverflow.com"
+    "Hacker News|news.ycombinator.com"
+    "Wikipedia|wikipedia.org"
+    "Telegram|telegram.org"
+    "LinkedIn|linkedin.com"
+    "Quora|quora.com"
+    "Medium|medium.com"
+    "Dev.to|dev.to"
+    "Mastodon|mastodon.social"
 )
 
-# --- China Mainland (trimmed) ---
 CN_TARGETS=(
-    "百度 Baidu|baidu.com|🇨🇳 China"
-    "腾讯 Tencent|qq.com|🇨🇳 China"
-    "阿里云 Aliyun|aliyun.com|🇨🇳 China"
-    "字节跳动 ByteDance|bytedance.com|🇨🇳 China"
-    "哔哩哔哩 Bilibili|bilibili.com|🇨🇳 China"
+    "Baidu 百度|baidu.com"
+    "Tencent 腾讯|qq.com"
+    "Aliyun 阿里云|aliyun.com"
+    "ByteDance 字节|bytedance.com"
+    "Bilibili 哔哩|bilibili.com"
 )
 
-# ── Usage / Help ───────────────────────────────────────────────────────────────
+# ── Help ───────────────────────────────────────────────────────────────────────
 usage() {
     echo -e "${BOLD}Usage:${RESET} $(basename "$0") [OPTIONS]"
     echo ""
-    echo -e "  ${CYAN}-c COUNT${RESET}    Number of ping packets per host ${DIM}(default: ${PING_COUNT})${RESET}"
-    echo -e "  ${CYAN}-t TIMEOUT${RESET}  Ping timeout in seconds         ${DIM}(default: ${PING_TIMEOUT})${RESET}"
-    echo -e "  ${CYAN}-h${RESET}          Show this help message"
+    echo -e "  ${CYAN}-c COUNT${RESET}    Ping packets per host  (default: ${PING_COUNT})"
+    echo -e "  ${CYAN}-t TIMEOUT${RESET}  Ping timeout seconds   (default: ${PING_TIMEOUT})"
+    echo -e "  ${CYAN}-h${RESET}          Show this help"
     echo ""
     exit 0
 }
 
-# ── Argument Parsing ───────────────────────────────────────────────────────────
 while getopts "c:t:h" opt; do
     case $opt in
-        c) PING_COUNT="$OPTARG" ;;
+        c) PING_COUNT="$OPTARG"   ;;
         t) PING_TIMEOUT="$OPTARG" ;;
         h) usage ;;
         *) usage ;;
     esac
 done
 
-# ── Environment Self-Check ─────────────────────────────────────────────────────
+# ── Dependency Check ───────────────────────────────────────────────────────────
 check_dependencies() {
     local missing=()
 
     if ! command -v ping &>/dev/null; then
-        missing+=("ping (iputils-ping or inetutils-ping)")
+        missing+=("ping  =>  sudo apt-get install iputils-ping")
     fi
-
-    # We prefer awk for math; bc is a fallback
-    if ! command -v awk &>/dev/null && ! command -v bc &>/dev/null; then
-        missing+=("awk (gawk or mawk) OR bc")
+    if ! command -v awk &>/dev/null; then
+        missing+=("awk   =>  sudo apt-get install gawk")
+    fi
+    if ! command -v curl &>/dev/null; then
+        missing+=("curl  =>  sudo apt-get install curl  (needed for HTTP fallback)")
     fi
 
     if [[ ${#missing[@]} -gt 0 ]]; then
-        echo -e "${RED}${BOLD}[ERROR]${RESET} Missing required tool(s):"
-        for tool in "${missing[@]}"; do
-            echo -e "  ${RED}✗${RESET} ${tool}"
+        echo -e "${RED}${BOLD}[ERROR] Missing tools:${RESET}"
+        local m
+        for m in "${missing[@]}"; do
+            echo -e "  ${RED}x${RESET}  $m"
         done
-        echo ""
-        echo -e "${YELLOW}Install on Debian/Ubuntu:${RESET}  sudo apt-get install -y iputils-ping gawk"
-        echo -e "${YELLOW}Install on CentOS/RHEL:${RESET}    sudo yum install -y iputils gawk"
-        echo -e "${YELLOW}Install on Alpine:${RESET}          apk add iputils gawk"
         echo ""
         exit 1
     fi
 }
 
-# ── Detect ping flavor (BSD vs GNU) ───────────────────────────────────────────
+# ── Detect ping flavor (GNU -W vs BSD -t) ──────────────────────────────────────
 detect_ping_os() {
-    # macOS / BSD ping uses -t for timeout; GNU ping uses -W
     if ping -W 1 -c 1 127.0.0.1 &>/dev/null 2>&1; then
         PING_OS="linux"
     else
@@ -161,28 +144,22 @@ detect_ping_os() {
     fi
 }
 
-# ── HTTP Fallback: measure TCP connect latency via curl ────────────────────────
-# Returns: "avg_ms|0|HTTP"  or  "9999|100|FAIL"
-# Runs 3 curl probes and averages them for stability.
+# ── HTTP Fallback ──────────────────────────────────────────────────────────────
+# Used when ICMP is blocked (100% ping loss).
+# Measures TCP-connect time via curl 3 times and averages them.
+# Echoes:  "avg_ms|0|HTTP"   or   "9999|100|FAIL"
 do_http_latency() {
     local host="$1"
-
-    if ! command -v curl &>/dev/null; then
-        echo "9999|100|FAIL"
-        return
-    fi
-
     local times=()
-    local i
+    local t i
+
     for (( i=0; i<3; i++ )); do
-        local t
-        # time_connect = time to finish TCP handshake (excludes TLS)
         t=$(curl -o /dev/null -sf \
-            --max-time 6 \
-            --connect-timeout 5 \
-            -w "%{time_connect}" \
-            "https://${host}" 2>/dev/null || true)
-        # Validate: must be a non-zero positive float
+                --max-time 6 \
+                --connect-timeout 5 \
+                -w "%{time_connect}" \
+                "https://${host}" 2>/dev/null || true)
+
         if [[ -n "$t" ]] && awk "BEGIN{exit !($t+0 > 0.0001)}"; then
             times+=("$t")
         fi
@@ -193,22 +170,18 @@ do_http_latency() {
         return
     fi
 
-    # Average connect times, convert seconds → ms, round to 2 dp
     local avg_ms
     avg_ms=$(printf '%s\n' "${times[@]}" | awk '
         { sum += $1; n++ }
-        END {
-            if (n > 0) printf "%.2f", (sum / n) * 1000
-            else       print "9999"
-        }
+        END { printf "%.2f", (sum / n) * 1000 }
     ')
 
     echo "${avg_ms}|0|HTTP"
 }
 
-# ── Core Ping Function ─────────────────────────────────────────────────────────
-# Returns: "avg_ms|loss_pct|PING"
-# On 100% ICMP loss, automatically retries with HTTP (do_http_latency).
+# ── Primary Ping ───────────────────────────────────────────────────────────────
+# Echoes:  "avg_ms|loss_pct|PING"
+# Falls back to do_http_latency on 100% loss or no output.
 do_ping() {
     local host="$1"
     local raw=""
@@ -220,30 +193,26 @@ do_ping() {
     fi
 
     if [[ -z "$raw" ]]; then
-        # No output at all → try HTTP fallback
         do_http_latency "$host"
         return
     fi
 
-    # Extract packet loss percentage
     local loss
-    loss=$(echo "$raw" | grep -oE '[0-9]+(\.[0-9]+)?% packet loss' \
-        | grep -oE '[0-9]+(\.[0-9]+)?' | head -1)
+    loss=$(echo "$raw" \
+        | grep -oE '[0-9]+(\.[0-9]+)?% packet loss' \
+        | grep -oE '[0-9]+(\.[0-9]+)?' \
+        | head -1)
     loss="${loss:-100}"
 
     if [[ "$loss" == "100" ]]; then
-        # ICMP blocked → try HTTP fallback before declaring failure
         do_http_latency "$host"
         return
     fi
 
-    # Extract average RTT — works for both Linux and BSD/macOS ping output
-    # Linux:  rtt min/avg/max/mdev = 1.2/3.4/5.6/1.2 ms
-    # BSD:    round-trip min/avg/max/stddev = 1.2/3.4/5.6/1.2 ms
     local avg
-    avg=$(echo "$raw" | grep -E 'min/avg/max' | awk -F'/' '{
-        gsub(/ /, "", $5); print $5
-    }')
+    avg=$(echo "$raw" \
+        | grep -E 'min/avg/max' \
+        | awk -F'/' '{ gsub(/ /,"",$5); print $5 }')
 
     if [[ -z "$avg" ]]; then
         do_http_latency "$host"
@@ -254,107 +223,167 @@ do_ping() {
 }
 
 # ── Colorize Latency ───────────────────────────────────────────────────────────
-# Args: ms  method(PING|HTTP|FAIL)
+# Args: ms  method
 colorize_latency() {
     local ms="$1"
     local method="${2:-PING}"
-
-    if [[ "$ms" == "9999" ]]; then
-        echo -e "${RED}${BOLD}Unreachable${RESET}"
-        return
-    fi
-
-    # Method badge: PING is invisible (normal), HTTP is dim cyan
     local badge=""
+
     if [[ "$method" == "HTTP" ]]; then
         badge=" ${DIM}${CYAN}[HTTP]${RESET}"
     fi
 
+    if [[ "$ms" == "9999" ]]; then
+        printf '%b' "${RED}${BOLD}Unreachable${RESET}"
+        return
+    fi
+
     local int_ms
-    int_ms=$(echo "$ms" | awk '{printf "%d", $1}')
+    int_ms=$(awk "BEGIN{printf \"%d\", $ms}")
+
     if   (( int_ms < 100 )); then
-        echo -e "${GREEN}${BOLD}${ms} ms${RESET}${badge}"
+        printf '%b' "${GREEN}${BOLD}${ms} ms${RESET}${badge}"
     elif (( int_ms < 200 )); then
-        echo -e "${YELLOW}${BOLD}${ms} ms${RESET}${badge}"
+        printf '%b' "${YELLOW}${BOLD}${ms} ms${RESET}${badge}"
     else
-        echo -e "${RED}${BOLD}${ms} ms${RESET}${badge}"
+        printf '%b' "${RED}${BOLD}${ms} ms${RESET}${badge}"
     fi
 }
 
 # ── Colorize Loss ──────────────────────────────────────────────────────────────
-# Args: loss_pct  method(PING|HTTP|FAIL)
+# Args: loss_pct  method
 colorize_loss() {
     local loss="$1"
     local method="${2:-PING}"
 
     if [[ "$method" == "FAIL" ]]; then
-        echo -e "${RED}${BOLD}100%${RESET}"
+        printf '%b' "${RED}${BOLD}100%%${RESET}"
         return
     fi
+
     if [[ "$method" == "HTTP" ]]; then
-        # ICMP was blocked; packet loss is not measurable via HTTP
-        echo -e "${DIM}N/A (ICMP blocked)${RESET}"
+        printf '%b' "${DIM}N/A (ICMP blocked)${RESET}"
         return
     fi
 
     local int_loss
-    int_loss=$(echo "$loss" | awk '{printf "%d", $1}')
-    if   (( int_loss == 0 ));  then echo -e "${GREEN}${loss}%${RESET}"
-    elif (( int_loss < 20 ));  then echo -e "${YELLOW}${loss}%${RESET}"
-    else                            echo -e "${RED}${BOLD}${loss}%${RESET}"
+    int_loss=$(awk "BEGIN{printf \"%d\", $loss}")
+
+    if   (( int_loss == 0  )); then printf '%b' "${GREEN}${loss}%%${RESET}"
+    elif (( int_loss < 20  )); then printf '%b' "${YELLOW}${loss}%%${RESET}"
+    else                             printf '%b' "${RED}${BOLD}${loss}%%${RESET}"
     fi
 }
 
-# ── Print Section Header ───────────────────────────────────────────────────────
+# ── Section Header ─────────────────────────────────────────────────────────────
 print_section() {
     local title="$1"
     echo ""
-    echo -e "${BOLD}${BLUE}┌──────────────────────────────────────────────────────────────────────────────┐${RESET}"
-    printf "${BOLD}${BLUE}│${RESET}  %-74s${BOLD}${BLUE}│${RESET}\n" "$title"
-    echo -e "${BOLD}${BLUE}└──────────────────────────────────────────────────────────────────────────────┘${RESET}"
+    echo -e "${BOLD}${BLUE}+------------------------------------------------------------------------------+${RESET}"
+    printf  "${BOLD}${BLUE}|${RESET}  %-74s${BOLD}${BLUE}|${RESET}\n" "$title"
+    echo -e "${BOLD}${BLUE}+------------------------------------------------------------------------------+${RESET}"
 }
 
-# ── Print Table Header ─────────────────────────────────────────────────────────
+# ── Table Header ───────────────────────────────────────────────────────────────
 print_table_header() {
     printf "\n"
-    printf "${BOLD}${WHITE}  %-22s  %-28s  %-22s  %-20s${RESET}\n" \
+    printf "${BOLD}${WHITE}  %-22s  %-28s  %-26s  %-20s${RESET}\n" \
         "Target" "Host / IP" "Avg Latency" "Pkt Loss"
-    printf "${DIM}  %-22s  %-28s  %-22s  %-20s${RESET}\n" \
-        "──────────────────────" "────────────────────────────" \
-        "──────────────────────" "────────────────────"
+    printf "${DIM}  %-22s  %-28s  %-26s  %-20s${RESET}\n" \
+        "----------------------" \
+        "----------------------------" \
+        "--------------------------" \
+        "--------------------"
 }
 
-# ── Print Table Row ────────────────────────────────────────────────────────────
+# ── Table Row ──────────────────────────────────────────────────────────────────
 print_row() {
     local name="$1"
     local host="$2"
-    local latency_col="$3"
+    local lat_col="$3"
     local loss_col="$4"
 
     printf "  %-22s  %-28s  " "$name" "$host"
 
-    # Latency column — strip ANSI to measure real char width, then pad
-    local lat_plain
-    lat_plain=$(printf '%b' "$latency_col" | sed 's/\x1b\[[0-9;]*m//g')
-    local pad=$(( 22 - ${#lat_plain} ))
+    # Strip ANSI to measure printable width, then right-pad to 26 chars
+    local lat_plain pad
+    lat_plain=$(printf '%b' "$lat_col" | sed 's/\x1b\[[0-9;]*m//g')
+    pad=$(( 26 - ${#lat_plain} ))
     (( pad < 0 )) && pad=0
-    printf '%b' "$latency_col"
+    printf '%b' "$lat_col"
     printf "%*s  " "$pad" ""
 
-    # Loss / method column
     printf '%b\n' "$loss_col"
 }
 
-# ── Run Benchmark for a Target Array ──────────────────────────────────────────
+# ── Run One Section ────────────────────────────────────────────────────────────
 run_benchmark() {
-    local -n targets_ref=$1
-    local spinner_chars=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
-    local i=0
+    local arr_name="$1"
+    local -n _targets="$arr_name"
 
     print_table_header
 
-    for entry in "${targets_ref[@]}"; do
-        IFS='|' read -r name host region <<< "$entry"
+    local entry name host result avg_ms loss_pct method lat_col loss_col
+    for entry in "${_targets[@]}"; do
+        IFS='|' read -r name host <<< "$entry"
 
-        # Spinner while pinging
-        printf "  ${DIM}%-22s  %-28s  Testing...${RESET}" "$name" "$host"
+        printf "  ${DIM}%-22s  %-28s  Testing...${RESET}\r" "$name" "$host"
+
+        result=$(do_ping "$host")
+        IFS='|' read -r avg_ms loss_pct method <<< "$result"
+        method="${method:-PING}"
+
+        lat_col=$(colorize_latency "$avg_ms" "$method")
+        loss_col=$(colorize_loss   "$loss_pct" "$method")
+
+        printf "\033[2K\r"
+        print_row "$name" "$host" "$lat_col" "$loss_col"
+    done
+}
+
+# ── Banner ─────────────────────────────────────────────────────────────────────
+print_banner() {
+    echo ""
+    echo -e "${BOLD}${CYAN}  VPS LATENCY TEST  v1.4.0${RESET}"
+    echo -e "${DIM}  ------------------------------------------------${RESET}"
+    echo ""
+    echo -e "  ${WHITE}Ping Count :${RESET} ${PING_COUNT} packets per host"
+    echo -e "  ${WHITE}Timeout    :${RESET} ${PING_TIMEOUT}s per packet"
+    echo -e "  ${WHITE}Timestamp  :${RESET} $(date '+%Y-%m-%d %H:%M:%S %Z')"
+    echo -e "  ${WHITE}Hostname   :${RESET} $(hostname 2>/dev/null || echo 'N/A')"
+    echo -e "  ${WHITE}Public IP  :${RESET} $(curl -sf --max-time 5 https://api.ipify.org 2>/dev/null || echo 'Unable to fetch')"
+}
+
+# ── Legend ─────────────────────────────────────────────────────────────────────
+print_legend() {
+    echo ""
+    echo -e "  ${BOLD}Latency :${RESET}  ${GREEN}[*]${RESET} < 100ms   ${YELLOW}[!]${RESET} 100-200ms   ${RED}[x]${RESET} > 200ms / Unreachable"
+    echo -e "  ${BOLD}Method  :${RESET}  (no tag) = ICMP ping   ${DIM}${CYAN}[HTTP]${RESET} = TCP connect time (ICMP blocked, curl fallback)"
+    echo ""
+}
+
+# ══ MAIN ══════════════════════════════════════════════════════════════════════
+main() {
+    check_dependencies
+    detect_ping_os
+    print_banner
+
+    print_section "  Global: Core Infrastructure & Tech"
+    run_benchmark TARGETS_CORE
+
+    print_section "  Global: Streaming & Media"
+    run_benchmark TARGETS_STREAMING
+
+    print_section "  Global: Social, Forums & Communities"
+    run_benchmark TARGETS_SOCIAL
+
+    print_section "  China Mainland"
+    run_benchmark CN_TARGETS
+
+    print_legend
+
+    echo -e "  ${DIM}Test complete. Results reflect current network conditions from this VPS node.${RESET}"
+    echo ""
+}
+
+main "$@"
