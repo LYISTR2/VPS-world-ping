@@ -16,9 +16,6 @@
 #    -t TIMEOUT  Ping timeout in seconds (default: 3)
 #    -h          Show this help message
 #
-#  One-liner   :
-#    curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/vps-latency-test/main/vps-latency-test.sh | bash
-#
 #  MIT License
 #  Copyright (c) 2025 VPS Benchmark Project
 #  Permission is hereby granted, free of charge, to any person obtaining a copy
