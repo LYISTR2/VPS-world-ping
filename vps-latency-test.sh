@@ -4,7 +4,7 @@
 #  vps-latency-test.sh
 #
 #  Author      : VPS Benchmark Project
-#  Version     : 1.2.0
+#  Version     : 1.3.0
 #  License     : MIT License
 #  Description : Tests network latency from your VPS to major global and
 #                Chinese websites using ping. Outputs a color-coded table
@@ -18,6 +18,7 @@ YELLOW='\033[0;33m'
 GREEN='\033[0;32m'
 CYAN='\033[0;36m'
 BLUE='\033[0;34m'
+MAGENTA='\033[0;35m'
 WHITE='\033[1;37m'
 BOLD='\033[1m'
 DIM='\033[2m'
@@ -26,25 +27,50 @@ RESET='\033[0m'
 PING_COUNT=5
 PING_TIMEOUT=3
 
-GLOBAL_TARGETS=(
-    "Google|google.com|🌐 Global"
-    "Cloudflare DNS|1.1.1.1|🌐 Global"
-    "GitHub|github.com|🌐 Global"
-    "YouTube|youtube.com|🌐 Global"
-    "Amazon AWS|amazon.com|🌐 Global"
-    "Cloudflare CDN|cloudflare.com|🌐 Global"
-    "Twitter / X|x.com|🌐 Global"
-    "Microsoft|microsoft.com|🌐 Global"
+TARGETS_CORE=(
+    "Google|google.com|🌐 Core"
+    "Cloudflare DNS|1.1.1.1|🌐 Core"
+    "Google DNS|8.8.8.8|🌐 Core"
+    "GitHub|github.com|🌐 Core"
+    "Amazon AWS|amazon.com|🌐 Core"
+    "Microsoft|microsoft.com|🌐 Core"
+    "Cloudflare CDN|cloudflare.com|🌐 Core"
+    "Fastly CDN|fastly.com|🌐 Core"
+)
+
+TARGETS_STREAMING=(
+    "YouTube|youtube.com|📺 Stream"
+    "Netflix|netflix.com|📺 Stream"
+    "Disney+|disneyplus.com|📺 Stream"
+    "Hulu|hulu.com|📺 Stream"
+    "Twitch|twitch.tv|📺 Stream"
+    "Spotify|spotify.com|📺 Stream"
+    "Apple TV+|tv.apple.com|📺 Stream"
+    "HBO Max|max.com|📺 Stream"
+    "Crunchyroll|crunchyroll.com|📺 Stream"
+    "SoundCloud|soundcloud.com|📺 Stream"
+)
+
+TARGETS_SOCIAL=(
+    "Twitter / X|x.com|💬 Social"
+    "Reddit|reddit.com|💬 Social"
+    "Discord|discord.com|💬 Social"
+    "Stack Overflow|stackoverflow.com|💬 Social"
+    "Hacker News|news.ycombinator.com|💬 Social"
+    "Wikipedia|wikipedia.org|💬 Social"
+    "Telegram|telegram.org|💬 Social"
+    "LinkedIn|linkedin.com|💬 Social"
+    "Quora|quora.com|💬 Social"
+    "Medium|medium.com|💬 Social"
+    "Dev.to|dev.to|💬 Social"
+    "Mastodon|mastodon.social|💬 Social"
 )
 
 CN_TARGETS=(
     "百度 Baidu|baidu.com|🇨🇳 China"
     "腾讯 Tencent|qq.com|🇨🇳 China"
-    "淘宝 Taobao|taobao.com|🇨🇳 China"
-    "字节跳动 ByteDance|bytedance.com|🇨🇳 China"
     "阿里云 Aliyun|aliyun.com|🇨🇳 China"
-    "网易 NetEase|163.com|🇨🇳 China"
-    "京东 JD.com|jd.com|🇨🇳 China"
+    "字节跳动 ByteDance|bytedance.com|🇨🇳 China"
     "哔哩哔哩 Bilibili|bilibili.com|🇨🇳 China"
 )
 
@@ -156,9 +182,9 @@ colorize_loss() {
     local loss="$1"
     local int_loss
     int_loss=$(echo "$loss" | awk '{printf "%d", $1}')
-    if   (( int_loss == 0 ));   then echo -e "${GREEN}${loss}%${RESET}"
-    elif (( int_loss < 20 ));   then echo -e "${YELLOW}${loss}%${RESET}"
-    else                              echo -e "${RED}${BOLD}${loss}%${RESET}"
+    if   (( int_loss == 0 )); then echo -e "${GREEN}${loss}%${RESET}"
+    elif (( int_loss < 20 )); then echo -e "${YELLOW}${loss}%${RESET}"
+    else echo -e "${RED}${BOLD}${loss}%${RESET}"
     fi
 }
 
@@ -223,7 +249,7 @@ print_banner() {
     echo "  ╚╗╔╝╠═╝╚═╗  ║  ╠═╣ ║ ║╣ ║║║║  ╚╦╝   ║ ║╣ ╚═╗ ║ "
     echo "   ╚╝ ╩  ╚═╝  ╩═╝╩ ╩ ╩ ╚═╝╝╚╝╚═╝ ╩    ╩ ╚═╝╚═╝ ╩ "
     echo -e "${RESET}"
-    echo -e "  ${DIM}VPS Global & China Latency Benchmark  •  v1.2.0${RESET}"
+    echo -e "  ${DIM}VPS Global & China Latency Benchmark  •  v1.3.0${RESET}"
     echo ""
     echo -e "  ${WHITE}Ping Count :${RESET} ${PING_COUNT} packets per host"
     echo -e "  ${WHITE}Timeout    :${RESET} ${PING_TIMEOUT}s per packet"
@@ -243,10 +269,16 @@ main() {
     detect_ping_os
     print_banner
 
-    print_section "🌐  Global Websites"
-    run_benchmark GLOBAL_TARGETS
+    print_section "🌐  Core Infrastructure & Tech"
+    run_benchmark TARGETS_CORE
 
-    print_section "🇨🇳  China Websites"
+    print_section "📺  Streaming & Media"
+    run_benchmark TARGETS_STREAMING
+
+    print_section "💬  Social, Forums & Communities"
+    run_benchmark TARGETS_SOCIAL
+
+    print_section "🇨🇳  China Mainland"
     run_benchmark CN_TARGETS
 
     print_legend

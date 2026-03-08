@@ -1,8 +1,8 @@
-# 🌐 VPS World Ping
+# 🌐 VPS Latency Test
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-1.2.0-blue?style=flat-square)
+![Version](https://img.shields.io/badge/version-1.3.0-blue?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 ![Shell](https://img.shields.io/badge/shell-bash-orange?style=flat-square)
 ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-lightgrey?style=flat-square)
@@ -18,47 +18,28 @@
 ## 📸 效果预览
 
 ```text
-  ╦  ╦╔═╗╔═╗  ╦  ╔═╗╔╦╗╔═╗╔╗╔╔═╗╦ ╦  ╔╦╗╔═╗╔═╗╔╦╗
-  ╚╗╔╝╠═╝╚═╗  ║  ╠═╣ ║ ║╣ ║║║║  ╚╦╝   ║ ║╣ ╚═╗ ║
-   ╚╝ ╩  ╚═╝  ╩═╝╩ ╩ ╩ ╚═╝╝╚╝╚═╝ ╩    ╩ ╚═╝╚═╝ ╩
+ ╦ ╦╔═╗╔═╗ ╦ ╔═╗╔╦╗╔═╗╔╗╔╔═╗╦ ╦ ╔╦╗╔═╗╔═╗╔╦╗
+ ╚╗╔╝╠═╝╚═╗ ║ ╠═╣ ║ ║╣ ║║║║ ╚╦╝ ║ ║╣ ╚═╗ ║
+ ╚╝ ╩ ╚═╝ ╩═╝╩ ╩ ╩ ╚═╝╝╚╝╚═╝ ╩ ╩ ╚═╝╚═╝ ╩
 
-  VPS Global & China Latency Benchmark  •  v1.2.0
-
-  Ping Count : 5 packets per host
-  Timeout    : 3s per packet
-  Timestamp  : 2025-07-10 12:34:56 UTC
-  Hostname   : vps-node-001
-  Public IP  : 203.0.113.42
-
-┌──────────────────────────────────────────────────────────────────────────────┐
-│  🌐  Global Websites                                                         │
-└──────────────────────────────────────────────────────────────────────────────┘
-
-  Target                  Host / IP                     Avg Latency         Pkt Loss
-  ──────────────────────  ────────────────────────────  ──────────────────  ──────────
-  Google                  google.com                    3.42 ms             0%
-  Cloudflare DNS          1.1.1.1                       1.89 ms             0%
-  GitHub                  github.com                    98.6 ms             0%
-  YouTube                 youtube.com                   145.2 ms            0%
-  Amazon AWS              amazon.com                    187.4 ms            0%
-  Cloudflare CDN          cloudflare.com                2.14 ms             0%
-  Twitter / X             x.com                         210.5 ms            0%
-  Microsoft               microsoft.com                 Timeout / Fail      100%
+ VPS Global & China Latency Benchmark • v1.3.0
 ```
 
-> 实际运行时延迟值为彩色输出：绿色（<100ms）、黄色（100–200ms）、红色（>200ms / 超时）。
+> 📌 实际运行时延迟数值以彩色显示：绿色（< 100ms）、黄色（100–200ms）、红色（> 200ms / 超时）
 
 ---
 
 ## ✨ 功能特性
 
-- 16 个默认测试目标，覆盖国际与中国大陆常见网站
-- 彩色延迟输出，快速看线路表现
-- 表格化展示名称、目标主机、平均延迟、丢包率
-- 自动检测 Linux / macOS 的 `ping` 参数差异
-- 支持自定义 ping 次数与超时时间
-- 纯 Bash 实现，零运行时依赖
-- 支持一键安装并立即执行
+| 特性 | 说明 |
+|------|------|
+| 🎯 **35 个测试目标** | 4 大分类：基础设施、流媒体、社区论坛、中国大陆 |
+| 🎨 **彩色输出** | 按延迟高低自动着色，一目了然 |
+| 📊 **整齐表格** | 名称、主机、平均延迟、丢包率四列对齐 |
+| 🔍 **环境自检** | 启动前自动检测 `ping`、`awk` 等依赖 |
+| ⚙️ **参数可调** | 支持自定义 ping 次数和超时时间 |
+| 🖥️ **跨平台** | 同时支持 GNU/Linux 和 BSD/macOS ping |
+| 🚀 **零依赖** | 纯 Bash 编写，无需安装额外软件包 |
 
 ---
 
@@ -67,19 +48,17 @@
 ### 一键运行（推荐）
 
 ```bash
+# 使用 bootstrap 安装并立即运行
 bash <(curl -fsSL https://raw.githubusercontent.com/LYISTR2/VPS-world-ping/main/bootstrap.sh)
+
+# 直接运行主脚本
+bash <(curl -fsSL https://raw.githubusercontent.com/LYISTR2/VPS-world-ping/main/vps-latency-test.sh)
 ```
 
-也可以直接指定参数：
+### 带参数运行
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/LYISTR2/VPS-world-ping/main/bootstrap.sh) -c 3 -t 2
-```
-
-### 直接执行主脚本
-
-```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/LYISTR2/VPS-world-ping/main/vps-latency-test.sh)
 ```
 
 ### 手动下载运行
@@ -98,27 +77,27 @@ chmod +x vps-latency-test.sh bootstrap.sh
 ```text
 Usage: vps-latency-test.sh [OPTIONS]
 
-  -c COUNT    每个目标 ping 的次数（默认: 5）
-  -t TIMEOUT  ping 超时时间（秒）（默认: 3）
-  -h          显示帮助信息
+ -c COUNT    每个目标 ping 的次数 (默认: 5)
+ -t TIMEOUT  ping 超时时间（秒） (默认: 3)
+ -h          显示帮助信息
 ```
 
 ### 示例
 
 ```bash
-# 默认测试
+# 默认运行（每目标 ping 5 次）
 ./vps-latency-test.sh
 
-# 快速模式
+# 快速模式（ping 3 次，适合快速概览）
 ./vps-latency-test.sh -c 3
 
-# 更稳定的采样
+# 精准模式（ping 10 次，结果更稳定）
 ./vps-latency-test.sh -c 10
 
-# 更长超时
+# 调整超时（适合高延迟线路）
 ./vps-latency-test.sh -c 5 -t 5
 
-# 保存纯文本结果
+# 保存结果到文件（去除 ANSI 颜色码）
 ./vps-latency-test.sh | sed 's/\x1b\[[0-9;]*m//g' > result.txt
 ```
 
@@ -126,38 +105,73 @@ Usage: vps-latency-test.sh [OPTIONS]
 
 ## 🎯 测试目标
 
-### 🌐 国际网站
+### 🌐 核心基础设施 & 科技（8 个）
 
-- Google → `google.com`
-- Cloudflare DNS → `1.1.1.1`
-- GitHub → `github.com`
-- YouTube → `youtube.com`
-- Amazon AWS → `amazon.com`
-- Cloudflare CDN → `cloudflare.com`
-- Twitter / X → `x.com`
-- Microsoft → `microsoft.com`
+| # | 名称 | 主机 |
+|---|------|------|
+| 1 | Google | `google.com` |
+| 2 | Cloudflare DNS | `1.1.1.1` |
+| 3 | Google DNS | `8.8.8.8` |
+| 4 | GitHub | `github.com` |
+| 5 | Amazon AWS | `amazon.com` |
+| 6 | Microsoft | `microsoft.com` |
+| 7 | Cloudflare CDN | `cloudflare.com` |
+| 8 | Fastly CDN | `fastly.com` |
 
-### 🇨🇳 国内网站
+### 📺 流媒体 & 媒体（10 个）
 
-- 百度 Baidu → `baidu.com`
-- 腾讯 Tencent → `qq.com`
-- 淘宝 Taobao → `taobao.com`
-- 字节跳动 ByteDance → `bytedance.com`
-- 阿里云 Aliyun → `aliyun.com`
-- 网易 NetEase → `163.com`
-- 京东 JD.com → `jd.com`
-- 哔哩哔哩 Bilibili → `bilibili.com`
+| # | 名称 | 主机 |
+|---|------|------|
+| 1 | YouTube | `youtube.com` |
+| 2 | Netflix | `netflix.com` |
+| 3 | Disney+ | `disneyplus.com` |
+| 4 | Hulu | `hulu.com` |
+| 5 | Twitch | `twitch.tv` |
+| 6 | Spotify | `spotify.com` |
+| 7 | Apple TV+ | `tv.apple.com` |
+| 8 | HBO Max | `max.com` |
+| 9 | Crunchyroll | `crunchyroll.com` |
+| 10 | SoundCloud | `soundcloud.com` |
+
+### 💬 社交、论坛 & 社区（12 个）
+
+| # | 名称 | 主机 |
+|---|------|------|
+| 1 | Twitter / X | `x.com` |
+| 2 | Reddit | `reddit.com` |
+| 3 | Discord | `discord.com` |
+| 4 | Stack Overflow | `stackoverflow.com` |
+| 5 | Hacker News | `news.ycombinator.com` |
+| 6 | Wikipedia | `wikipedia.org` |
+| 7 | Telegram | `telegram.org` |
+| 8 | LinkedIn | `linkedin.com` |
+| 9 | Quora | `quora.com` |
+| 10 | Medium | `medium.com` |
+| 11 | Dev.to | `dev.to` |
+| 12 | Mastodon | `mastodon.social` |
+
+### 🇨🇳 中国大陆（5 个）
+
+| # | 名称 | 主机 |
+|---|------|------|
+| 1 | 百度 Baidu | `baidu.com` |
+| 2 | 腾讯 Tencent | `qq.com` |
+| 3 | 阿里云 Aliyun | `aliyun.com` |
+| 4 | 字节跳动 ByteDance | `bytedance.com` |
+| 5 | 哔哩哔哩 Bilibili | `bilibili.com` |
 
 ---
 
 ## 🖥️ 系统要求
 
-- Bash 4.0+
-- `ping`
-- `awk`（或兼容实现）
-- `curl`（仅用于获取公网 IP，可选）
+| 组件 | 要求 |
+|------|------|
+| Shell | Bash 4.0+ |
+| ping | iputils-ping（Linux）或系统内置（macOS） |
+| awk | gawk / mawk / nawk（任一） |
+| curl | 用于获取公网 IP（可选，不影响主功能） |
 
-### 依赖安装示例
+### 安装依赖（如缺失）
 
 ```bash
 # Debian / Ubuntu
@@ -169,7 +183,7 @@ sudo yum install -y iputils gawk curl bash
 # Alpine Linux
 apk add iputils gawk curl bash
 
-# macOS
+# macOS (通过 Homebrew)
 brew install gawk
 ```
 
@@ -177,28 +191,30 @@ brew install gawk
 
 ## 🎨 延迟颜色说明
 
-- 🟢 绿色：`< 100 ms`
-- 🟡 黄色：`100 – 200 ms`
-- 🔴 红色：`> 200 ms`
-- 🔴 红色粗体：超时 / 不可达 / 100% 丢包
+| 颜色 | 延迟范围 | 说明 |
+|------|----------|------|
+| 🟢 **绿色** | < 100 ms | 优秀，适合大多数应用 |
+| 🟡 **黄色** | 100 – 200 ms | 良好，日常使用可接受 |
+| 🔴 **红色** | > 200 ms | 较高，可能影响体验 |
+| 🔴 **红色粗体** | 超时 / 失败 | 目标不可达或 100% 丢包 |
 
 ---
 
 ## ❓ 常见问题
 
-**Q：为什么境外 VPS 到国内网站延迟高？**  
-A：这是正常现象，受物理距离、跨境路由、运营商 QoS 和线路类型影响很大。
+**Q：为什么国内网站从境外 VPS 延迟很高？**  
+A：这是正常现象。跨国路由、海底电缆物理距离以及 QoS 策略都会带来较高延迟。
 
 **Q：Timeout / Fail 是什么意思？**  
-A：通常表示目标屏蔽了 ICMP，或者从当前 VPS 出口不可达。
+A：目标主机可能屏蔽了 ICMP ping，或者从当前 VPS 出口不可达。
 
-**Q：怎么保存成纯文本？**  
+**Q：如何将结果保存为纯文本？**  
 ```bash
 ./vps-latency-test.sh | sed 's/\x1b\[[0-9;]*m//g' | tee result-$(date +%Y%m%d-%H%M).txt
 ```
 
-**Q：如何自定义测试目标？**  
-A：编辑脚本里的 `GLOBAL_TARGETS` 和 `CN_TARGETS` 数组即可。
+**Q：如何添加自定义测试目标？**  
+A：编辑脚本中的 `TARGETS_CORE`、`TARGETS_STREAMING`、`TARGETS_SOCIAL`、`CN_TARGETS` 数组即可。
 
 ---
 
@@ -206,9 +222,9 @@ A：编辑脚本里的 `GLOBAL_TARGETS` 和 `CN_TARGETS` 数组即可。
 
 ```text
 VPS-world-ping/
-├── vps-latency-test.sh   # 主测试脚本
+├── vps-latency-test.sh   # 主脚本
 ├── bootstrap.sh          # 一键安装/运行脚本
-├── README.md             # 说明文档
+├── README.md             # 本文档
 └── LICENSE               # MIT 许可证
 ```
 
@@ -216,12 +232,14 @@ VPS-world-ping/
 
 ## 📄 License
 
-MIT
+本项目基于 [MIT License](LICENSE) 开源。
 
 ---
 
 <div align="center">
 
-如果这个项目对你有帮助，欢迎点个 ⭐ Star。
+如果这个项目对你有帮助，欢迎点一个 ⭐ Star！
+
+Made with ❤️ for the VPS community
 
 </div>
