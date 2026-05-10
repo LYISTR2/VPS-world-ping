@@ -51,9 +51,6 @@
 # 使用 bootstrap 安装并立即运行
 bash <(curl -fsSL https://raw.githubusercontent.com/LYISTR2/VPS-world-ping/main/bootstrap.sh)
 
-# 直接运行主脚本
-bash <(curl -fsSL https://raw.githubusercontent.com/LYISTR2/VPS-world-ping/main/vps-latency-test.sh)
-```
 
 ### 带参数运行
 
