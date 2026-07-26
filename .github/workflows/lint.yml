@@ -1,0 +1,30 @@
+name: lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+
+      - name: Syntax check
+        run: |
+          bash -n vps-latency-test.sh
+          bash -n bootstrap.sh
+
+      - name: ShellCheck
+        run: shellcheck --severity=warning --shell=bash vps-latency-test.sh bootstrap.sh
+
+      - name: Smoke test (localhost only)
+        run: |
+          printf 'local|Loopback|127.0.0.1\n' > /tmp/targets.txt
+          ./vps-latency-test.sh -T /tmp/targets.txt -g local -c 2 -q --color never
+          ./vps-latency-test.sh -T /tmp/targets.txt -g local -c 2 -q -f json | python3 -m json.tool > /dev/null
+          ./vps-latency-test.sh -T /tmp/targets.txt -g local -c 2 -q -f csv
